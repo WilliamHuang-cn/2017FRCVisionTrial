@@ -33,7 +33,7 @@ private:
 		cs::CvSink cvSink = CameraServer::GetInstance()->GetVideo();
 		// Setup a CvSource. This will send images back to the Dashboard
 		cs::CvSource outputStream = CameraServer::GetInstance()->
-				PutVideo("DSFeed", 1080, 720);
+				PutVideo("DSFeed", 640, 480);
 
 		// Mats are very memory expensive. Lets reuse this Mat.
 		cv::Mat mat;
@@ -51,9 +51,16 @@ private:
 				continue;
 			}
 			// Put a rectangle on the image
-//			rectangle(mat, cv::Point(100, 100), cv::Point(400, 400),
-//					cv::Scalar(255, 255, 255), 5);
+			rectangle(mat, cv::Point(100, 100), cv::Point(400, 400),cv::Scalar(255, 255, 255), 5);
 
+
+			// Set pipeline source
+			pipel.setsource0(mat);
+			pipel.Process();
+
+			int temp = ((*(pipel.getfindContoursOutput()))[0][0]).x;
+			string tempString = std::to_string(temp);
+			cv::putText(mat, tempString, cv::Point(10,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255,255,0));
 
 			// Give the output stream a new image to display
 			outputStream.PutFrame(mat);
