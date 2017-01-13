@@ -98,9 +98,6 @@ private:
 				// skip the rest of the current iteration
 				continue;
 			}
-			// Put a rectangle on the image
-			rectangle(mat, cv::Point(100, 100), cv::Point(400, 400),cv::Scalar(255, 0, 255), 5);
-
 
 			// Set pipeline source
 			pipel.setsource0(mat);
@@ -115,13 +112,61 @@ private:
 		}
 	}
 
+	// Under testing
+	static void AxisVisionThread() {
+
+			// Using an Axis camera
+			llvm::StringRef name = "Axis";
+			llvm::StringRef url = "axis-camera.localm";
+			cs::AxisCamera camera(name,url);
+			// Set the resolution
+			camera.SetResolution(640, 480);
+			// Add camera to cameraserver
+			CameraServer::GetInstance()->AddCamera(camera);
+
+			// Get a CvSink. This will capture Mats from the Camera
+			cs::CvSink cvSink = CameraServer::GetInstance()->GetVideo();
+			// Setup a CvSource. This will send images back to the Dashboard
+			cs::CvSource outputStream = CameraServer::GetInstance()->
+					PutVideo("AxisFeed", 640, 480);
+
+			// Mats are very memory expensive. Lets reuse this Mat.
+			cv::Mat mat;
+
+			// Set up Pipeline
+			Pipeline pipel;
+
+			while (true) { 		// May need to end vision while disabled
+				// Tell the CvSink to grab a frame from the camera and put it in the source mat.  If there is an error notify the output.
+				if (cvSink.GrabFrame(mat) == 0) {
+					// Send the output the error.
+					outputStream.NotifyError(cvSink.GetError());
+					// skip the rest of the current iteration
+					continue;
+				}
+
+				// Set pipeline source
+				pipel.setsource0(mat);
+				pipel.Process();
+
+				int temp = ((*(pipel.getfindContoursOutput()))[0][0]).x;
+				string tempString = std::to_string(temp);
+				cv::putText(mat, tempString, cv::Point(10,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255,255,0));
+
+				// Give the output stream a new image to display
+				outputStream.PutFrame(mat);
+			}
+	}
+
 public:
 	void RobotInit() override {
 
 		std::thread usbvisionThread(USBVisionThread);
 		std::thread httpvisionThread(HTTPVisionThread);
+		std::thread axisvisionThread(AxisVisionThread);
 		usbvisionThread.detach();
 		httpvisionThread.detach();
+		axisvisionThread.detach();
 
 		robotCounter = 0;
 	}
