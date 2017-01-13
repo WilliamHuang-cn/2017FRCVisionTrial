@@ -21,19 +21,19 @@ class IntermediateVisionRobot : public frc::SampleRobot
 	Pipeline pipeline;
 
 private:
-	static void VisionThread() {
+	static void USBVisionThread() {
 
 		// Get the USB camera from CameraServer
 		// Using default cam0
 		cs::UsbCamera camera = CameraServer::GetInstance()->StartAutomaticCapture();
 		// Set the resolution
-//		camera.SetResolution(640, 480);
+		camera.SetResolution(640, 480);
 
 		// Get a CvSink. This will capture Mats from the Camera
 		cs::CvSink cvSink = CameraServer::GetInstance()->GetVideo();
 		// Setup a CvSource. This will send images back to the Dashboard
 		cs::CvSource outputStream = CameraServer::GetInstance()->
-				PutVideo("DSFeed", 640, 480);
+				PutVideo("USBFeed", 640, 480);
 
 		// Mats are very memory expensive. Lets reuse this Mat.
 		cv::Mat mat;
@@ -42,8 +42,7 @@ private:
 		Pipeline pipel;
 
 		while (true) { 		// May need to end vision while disabled
-			// Tell the CvSink to grab a frame from the camera and put it
-			// in the source mat.  If there is an error notify the output.
+			// Tell the CvSink to grab a frame from the camera and put it in the source mat.  If there is an error notify the output.
 			if (cvSink.GrabFrame(mat) == 0) {
 				// Send the output the error.
 				outputStream.NotifyError(cvSink.GetError());
@@ -67,11 +66,62 @@ private:
 		}
 	}
 
+	static void HTTPVisionThread() {
+
+		// Using a MJPEG streamer through HTTP
+		llvm::StringRef name = "RPi";
+		llvm::StringRef url = "http://raspberrypi.local:8080/?action=stream";
+		cs::HttpCamera camera(name,url,cs::HttpCamera::HttpCameraKind::kMJPGStreamer);
+		// Set the resolution
+		camera.SetResolution(640, 480);
+		camera.SetPixelFormat(cs::VideoMode::PixelFormat::kYUYV);
+		// Add camera to cameraserver
+		CameraServer::GetInstance()->AddCamera(camera);
+
+		// Get a CvSink. This will capture Mats from the Camera
+		cs::CvSink cvSink = CameraServer::GetInstance()->GetVideo();
+		// Setup a CvSource. This will send images back to the Dashboard
+		cs::CvSource outputStream = CameraServer::GetInstance()->
+				PutVideo("RPiFeed", 640, 480);
+
+		// Mats are very memory expensive. Lets reuse this Mat.
+		cv::Mat mat;
+
+		// Set up Pipeline
+		Pipeline pipel;
+
+		while (true) { 		// May need to end vision while disabled
+			// Tell the CvSink to grab a frame from the camera and put it in the source mat.  If there is an error notify the output.
+			if (cvSink.GrabFrame(mat) == 0) {
+				// Send the output the error.
+				outputStream.NotifyError(cvSink.GetError());
+				// skip the rest of the current iteration
+				continue;
+			}
+			// Put a rectangle on the image
+			rectangle(mat, cv::Point(100, 100), cv::Point(400, 400),cv::Scalar(255, 0, 255), 5);
+
+
+			// Set pipeline source
+			pipel.setsource0(mat);
+			pipel.Process();
+
+			int temp = ((*(pipel.getfindContoursOutput()))[0][0]).x;
+			string tempString = std::to_string(temp);
+			cv::putText(mat, tempString, cv::Point(10,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255,255,0));
+
+			// Give the output stream a new image to display
+			outputStream.PutFrame(mat);
+		}
+	}
+
 public:
 	void RobotInit() override {
 
-		std::thread visionThread(VisionThread);
-		visionThread.detach();
+		std::thread usbvisionThread(USBVisionThread);
+		std::thread httpvisionThread(HTTPVisionThread);
+		usbvisionThread.detach();
+		httpvisionThread.detach();
 
 		robotCounter = 0;
 	}

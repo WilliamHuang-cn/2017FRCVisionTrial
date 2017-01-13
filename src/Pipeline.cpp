@@ -17,12 +17,12 @@ void Pipeline::Process(){
 	double rgbThresholdRed[] = {0.0, 77.49575551782682};
 	double rgbThresholdGreen[] = {0.0, 153.25976230899832};
 	double rgbThresholdBlue[] = {0.0, 47.190152801358224};
-//	rgbThreshold(rgbThresholdInput, rgbThresholdRed, rgbThresholdGreen, rgbThresholdBlue, this->rgbThresholdOutput);
-	rgbThreshold(rgbThresholdInput, rgbThresholdRed, rgbThresholdGreen, rgbThresholdBlue, rgbThresholdInput);
+	rgbThreshold(rgbThresholdInput, rgbThresholdRed, rgbThresholdGreen, rgbThresholdBlue, this->rgbThresholdOutput);
+//	rgbThreshold(rgbThresholdInput, rgbThresholdRed, rgbThresholdGreen, rgbThresholdBlue, rgbThresholdInput);
 	//Step Find_Contours0:
 	//input
-//	Mat findContoursInput = rgbThresholdOutput;
-	Mat findContoursInput = rgbThresholdInput;
+	Mat findContoursInput = rgbThresholdOutput;
+//	Mat findContoursInput = rgbThresholdInput;
 	bool findContoursExternalOnly = false;
 	findContours(findContoursInput, findContoursExternalOnly, this->findContoursOutput);
 }
